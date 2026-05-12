@@ -1,74 +1,71 @@
 #include <iostream>
-#include <vector>
 #include <omp.h>
 
 using namespace std;
 
-class Graph {
-    int V;
-    vector<vector<int>> adj;
-
+// Tree Node
+class Node
+{
 public:
+    int data;
+    Node* left;
+    Node* right;
 
-    Graph(int vertices) {
-        V = vertices;
-        adj.resize(V);
-    }
-
-    // Add edge
-    void addEdge(int u, int v) {
-        adj[u].push_back(v);
-        adj[v].push_back(u);
-    }
-
-    // DFS Utility
-    void dfsUtil(int node, vector<bool>& visited) {
-
-        visited[node] = true;
-
-        cout << node << " ";
-
-        for (int neighbor : adj[node]) {
-
-            if (!visited[neighbor]) {
-                dfsUtil(neighbor, visited);
-            }
-        }
-    }
-
-    // Parallel DFS
-    void parallelDFS(int start) {
-
-        vector<bool> visited(V, false);
-
-        cout << "Parallel DFS Traversal: ";
-
-        #pragma omp parallel
-        {
-            #pragma omp single
-            {
-                dfsUtil(start, visited);
-            }
-        }
-
-        cout << endl;
+    Node(int value)
+    {
+        data = value;
+        left = NULL;
+        right = NULL;
     }
 };
 
-int main() {
+// Parallel DFS
+void parallelDFS(Node* root)
+{
+    if(root == NULL)
+    {
+        return;
+    }
 
-    Graph g(8);
+    #pragma omp critical
+    {
+        cout << root->data << " ";
+    }
 
-    // Add edges
-    g.addEdge(0, 1);
-    g.addEdge(0, 2);
-    g.addEdge(1, 3);
-    g.addEdge(1, 4);
-    g.addEdge(2, 5);
-    g.addEdge(2, 6);
-    g.addEdge(3, 7);
+    #pragma omp parallel sections
+    {
+        // Left Subtree
+        #pragma omp section
+        {
+            parallelDFS(root->left);
+        }
 
-    g.parallelDFS(0);
+        // Right Subtree
+        #pragma omp section
+        {
+            parallelDFS(root->right);
+        }
+    }
+}
+
+int main()
+{
+    // Creating Tree
+
+    Node* root = new Node(1);
+
+    root->left = new Node(2);
+    root->right = new Node(3);
+
+    root->left->left = new Node(4);
+    root->left->right = new Node(5);
+
+    root->right->left = new Node(6);
+    root->right->right = new Node(7);
+
+    cout << "Parallel DFS Traversal:\n";
+
+    parallelDFS(root);
 
     return 0;
 }
