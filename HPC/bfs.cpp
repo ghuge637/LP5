@@ -13,83 +13,98 @@
 
 // 2) Add this line inside main()
 //    cout << "Threads: " << omp_get_max_threads() << endl;
-
 #include <iostream>
-#include <vector>
 #include <queue>
 #include <omp.h>
 
 using namespace std;
 
-class Graph {
-    int V;
-    vector<vector<int>> adj;
-
+// Tree Node
+class Node
+{
 public:
+    int data;
+    Node* left;
+    Node* right;
 
-    Graph(int vertices) {
-        V = vertices;
-        adj.resize(V);
+    Node(int value)
+    {
+        data = value;
+        left = NULL;
+        right = NULL;
+    }
+};
+
+// Parallel BFS
+void parallelBFS(Node* root)
+{
+    if(root == NULL)
+    {
+        return;
     }
 
-    // Add edge
-    void addEdge(int u, int v) {
-        adj[u].push_back(v);
-        adj[v].push_back(u);
-    }
+    queue<Node*> q;
+    q.push(root);
 
-    // Parallel BFS
-    void parallelBFS(int start) {
+    cout << "Parallel BFS Traversal:\n";
 
-        vector<bool> visited(V, false);
-        queue<int> q;
+    while(!q.empty())
+    {
+        Node* current = q.front();
+        q.pop();
 
-        visited[start] = true;
-        q.push(start);
+        // Thread-safe print
+        #pragma omp critical
+        {
+            cout << current->data << " ";
+        }
 
-        cout << "Parallel BFS Traversal: ";
-
-        while (!q.empty()) {
-
-            int current = q.front();
-            q.pop();
-
-            cout << current << " ";
-
-            // Parallel traversal of neighbors
-            #pragma omp parallel for
-            for (int i = 0; i < adj[current].size(); i++) {
-
-                int neighbor = adj[current][i];
-
-                #pragma omp critical
+        // Parallel sections for left and right child
+        #pragma omp parallel sections
+        {
+            // Left Child
+            #pragma omp section
+            {
+                if(current->left != NULL)
                 {
-                    if (!visited[neighbor]) {
-                        visited[neighbor] = true;
-                        q.push(neighbor);
+                    #pragma omp critical
+                    {
+                        q.push(current->left);
+                    }
+                }
+            }
+
+            // Right Child
+            #pragma omp section
+            {
+                if(current->right != NULL)
+                {
+                    #pragma omp critical
+                    {
+                        q.push(current->right);
                     }
                 }
             }
         }
-
-        cout << endl;
     }
-};
+}
 
-int main() {
+int main()
+{
+    // Creating Tree
 
-    Graph g(8);
+    Node* root = new Node(1);
 
-    // Add edges
-    g.addEdge(0, 1);
-    g.addEdge(0, 2);
-    g.addEdge(1, 3);
-    g.addEdge(1, 4);
-    g.addEdge(2, 5);
-    g.addEdge(2, 6);
-    g.addEdge(3, 7);
+    root->left = new Node(2);
+    root->right = new Node(3);
 
-    g.parallelBFS(0);
+    root->left->left = new Node(4);
+    root->left->right = new Node(5);
+
+    root->right->left = new Node(6);
+    root->right->right = new Node(7);
+
+    parallelBFS(root);
 
     return 0;
 }
