@@ -1,3 +1,19 @@
+// 1) g++ --version
+
+// 2) sudo apt update
+//   sudo apt install g++
+
+// 3) g++ dfs.cpp -fopenmp -o graph
+
+// 4) ./graph
+
+// If You Get Error: “omp.h not found”
+
+// 1) sudo apt install libomp-dev
+
+// 2) Add this line inside main()
+//    cout << "Threads: " << omp_get_max_threads() << endl;
+
 #include <iostream>
 #include <omp.h>
 
